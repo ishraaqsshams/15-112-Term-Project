@@ -91,7 +91,8 @@ class Player(object):
         self.xChange = 0
         self.yChange = 0
         self.vel = 3
-        self.health = 500
+        self.totalHealth = 500
+        self.health = self.totalHealth
         self.image = pygame.image.load('Player.png')
         self.playerImage = pygame.transform.scale(self.image, (self.size, self.size))
 
@@ -100,7 +101,7 @@ class Player(object):
         takes the mouse position and returns the angle in degrees the player 
         image must rotate to follow the cursor
         Param: 2 ints
-        Returns: angle, int
+        Returns: int
         '''
         centerX = self.x + self.size / 2
         centerY = self.y + self.size / 2
@@ -115,14 +116,6 @@ class Player(object):
         angle = math.atan((mouseY - centerY) / (mouseX - centerX)) - \
             math.pi / 2
         return -(angle * 180 / math.pi)
-
-    def playerCollision(self):
-        '''
-        If player collides with enemy, it loses 10 health points
-        Param: self
-        return: None
-        '''
-        self.health -= 10
     
     def usePowerUp(self):
         pass
@@ -138,6 +131,8 @@ class Player(object):
         # from https://www.pygame.org/docs/ref/transform.html 
         newPlayerImage = pygame.transform.rotate(self.playerImage, angle)
         window.blit(newPlayerImage, (self.x, self.y))
+        pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.size / 8, self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
 
 class Blast(object):
     def __init__(self, startX, startY, endX, endY):
@@ -207,7 +202,8 @@ class Asteroid(object):
         self.size = random.randint(40, 60)
         self.centerX = self.startX + self.size / 2
         self.centerY = self.startY + self.size / 2
-        self.gotHit = 0
+        self.totalHealth = 20
+        self.health = self.totalHealth
         self.speed = random.randint(2, 4)
         self.vector = (self.targetX - self.startX, self.targetY - self.startY)
         self.unitVector = getUnitVector(self.vector)
@@ -226,32 +222,35 @@ class Asteroid(object):
         self.startY += changeY
         self.centerX += changeX
         self.centerY += changeY
-        if self.gotHit == 0:
+        if self.health == self.totalHealth:
             window.blit(self.image, (self.startX, self.startY))
         else:
             window.blit(self.imageCollide, (self.startX, self.startY))
+        pygame.draw.rect(window, (255, 0, 0), (self.startX, self.startY + self.size / 8, self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), (self.startX, self.startY + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
 
 class EnemyShip(object):
     def __init__(self, targetX, targetY):
         self.targetX = targetX
         self.targetY = targetY
         bound = random.choice([1, 2, 3, 4])
+        self.size = 200
         #left wall
         if bound == 1:
-            self.startX = 0
+            self.startX = -self.size
             self.startY = random.randint(0, screenHeight)
         # top wall
         elif bound == 2:
             self.startX = random.randint(0, screenWidth)
-            self.startY = 0
+            self.startY = -self.size
         # right wall
         elif bound == 3:
             self.startX = screenWidth
             self.startY = random.randint(0, screenHeight)
+        # bottom wall
         else:
             self.startX = random.randint(0, screenWidth)
             self.startY = screenHeight
-        self.size = 200
         self.centerX = self.startX + self.size / 2
         self.centerY = self.startY + self.size / 2
         self.speed = 3
@@ -259,15 +258,16 @@ class EnemyShip(object):
         self.shoot = not self.move
         self.image = 1
         self.counter = 0
+        self.totalHealth = 500
+        self.health = self.totalHealth
 
-            
     def shoot(self, targetX, targetY):
         if self.shoot:
             enemyBlastList.append(EnemyBlast(self.centerX + 20, self.centerY + 20, \
                 targetX + 10, targetY + 10))
         
     def drawShip(self):
-        if self.move:
+        if self.move: 
             self.targetX = player.centerX
             self.targetY = player.centerY
             self.centerX = self.startX + self.size / 2
@@ -292,13 +292,16 @@ class EnemyShip(object):
         angle = - getAngle(self.centerX, self.centerY, player.centerX, player.centerY)
         newImage = pygame.transform.rotate(self.image, angle)
         window.blit(newImage, (self.startX, self.startY))
+        pygame.draw.rect(window, (255, 0, 0), (self.startX, self.startY + self.size / 8, self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), (self.startX, self.startY + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
 
 
 class SmallShip(EnemyShip):
     def __init__(self, targetX, targetY):
         super().__init__(targetX, targetY)
         self.size = 50
-        self.health = 20
+        self.totalHealth = 20
+        self.health = self.totalHealth
         self.image = pygame.image.load('smallShip.png')
         self.image = pygame.transform.scale(self.image, (self.size, self.size))
 
@@ -306,7 +309,8 @@ class MediumShip(EnemyShip):
     def __init__(self, targetX, targetY):
         super().__init__(targetX, targetY)
         self.size = 100
-        self.health = 50
+        self.totalHealth = 50
+        self.health = self.totalHealth
         self.image = pygame.image.load('mediumShip.png')
         self.image = pygame.transform.rotate(self.image, -90)
         self.image = pygame.transform.scale(self.image, (self.size, self.size))
@@ -341,13 +345,13 @@ def drawAll(mouseX, mouseY, angle):
         asteroid.drawAsteroid()
         if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
             player.centerX, player.centerY, player.size):
-            player.health -= 20
-            asteroid.gotHit += 0.5
+            player.health -= 10
+            asteroid.health -= 5
         if not isInRange(asteroid.startX,asteroid.startY)\
             and not isInRange(asteroid.startX + asteroid.size, \
                  asteroid.startY + asteroid.size):
             asteroidList.remove(asteroid)
-        elif asteroid.gotHit >= 2:
+        elif asteroid.health <= 0:
             asteroidList.remove(asteroid)
     # draw ships
     # check for blasts and asteroid collision
@@ -356,7 +360,7 @@ def drawAll(mouseX, mouseY, angle):
             if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
                 blast.centerX, blast.centerY, blast.size):
                 blast.collided = True
-                asteroid.gotHit += 1
+                asteroid.health -= 10
     for enemy in shipList:
         enemy.drawShip()
         if enemy.health <= 0:
@@ -440,9 +444,9 @@ while running:
     if randomNum > 995:
         asteroidList.append(Asteroid(player.x, player.y))
     # generate small ship
-    if randomNum < 4: 
+    if randomNum < 10: 
         randTypeShip= random.randint(1, 100)
-        if randTypeShip < 75:
+        if randTypeShip < 50:
             shipList.append(SmallShip(player.centerX, player.centerY))
         else:
             shipList.append(MediumShip(player.x, player.y))
