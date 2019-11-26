@@ -9,6 +9,36 @@ screenHeight = 600
 window = pygame.display.set_mode((screenWidth, screenHeight), 0, 32)
 pygame.display.set_caption('Beat Hazard')
 
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (255, 0, 0)
+BLACK = (0, 0, 0)
+
+class Button(object):
+    def __init__(self, text, centerX, centerY, sizeX, sizeY):
+        self.centerX = centerX
+        self.centerY = centerY
+        self.sizeX = sizeX
+        self.sizeY = sizeY
+        self.x = self.centerX - self.sizeX / 2
+        self.y = self.centerY - self.sizeY / 2
+        self.color = WHITE
+        self.fontName = pygame.font.match_font('Arial')
+        self.text = text
+
+    def drawText(self, surface, size = 20, color = BLACK):
+        font = pygame.font.Font(self.fontName, size)
+        textSurface = font.render(self.text, True, color)
+        textBox = textSurface.get_rect()
+        textBox.midtop = (self.centerX, self.centerY - size / 2)
+        surface.blit(textSurface, textBox)
+    
+    def drawButton(self, surface):
+        pygame.draw.rect(surface, self.color, (self.x, self.y, self.sizeX, self.sizeY))
+        self.drawText(surface)
+
+
 def getAngle(startX, startY, endX, endY):
     '''
     takes in two points and returns the angle of the line between those points
@@ -131,14 +161,53 @@ class Player(object):
         # from https://www.pygame.org/docs/ref/transform.html 
         newPlayerImage = pygame.transform.rotate(self.playerImage, angle)
         window.blit(newPlayerImage, (self.x, self.y))
-        pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.size / 8, self.size, self.size / 20))
-        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
+        pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.size / 8, \
+            self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.size / 8, \
+            (self.health / self.totalHealth) * self.size, self.size / 20))
+
+healthImage = pygame.image.load('healthBoost.png')
+speedImage = pygame.image.load('speedBoost.png')
+damageImage = pygame.image.load('damageBoost.png')
+destroyImage = pygame.image.load('destroyBoost.png')
+
+class PowerUp(object):
+    def __init__(self, centerX, centerY):
+        self.size = 30
+        self.centerX = centerX
+        self.centerY = centerY
+        self.x = self.centerX - self.size / 2
+        self.y = self.centerY - self.size / 2
+        self.image = 1
+
+    def drawPowerUp(self):
+        window.blit(self.image, (self.x, self.y))
+
+class MoreDamage(PowerUp):
+    def __init__(self, centerX, centerY):
+        super().__init__(centerX, centerY)
+        self.image = pygame.transform.scale(damageImage, (self.size, self.size))
+
+class MoreSpeed(PowerUp):
+    def __init__(self, centerX, centerY):
+        super().__init__(centerX, centerY)
+        self.image = pygame.transform.scale(speedImage, (self.size, self.size))
+
+class MoreHealth(PowerUp):
+    def __init__(self, centerX, centerY):
+        super().__init__(centerX, centerY)
+        self.image = pygame.transform.scale(healthImage, (self.size, self.size))   
+
+class DestroyEnemies(PowerUp):
+    def __init__(self, centerX, centerY):
+        super().__init__(centerX, centerY)
+        self.image = pygame.transform.scale(destroyImage, (self.size, self.size))
 
 class Blast(object):
     def __init__(self, startX, startY, endX, endY):
         self.size = 20
-        self.startX = startX -20
-        self.startY = startY -20
+        self.startX = startX - 20
+        self.startY = startY - 20
         self.centerX = self.startX + self.size / 2
         self.centerY = self.startY + self.size / 2
         self.endX = endX
@@ -149,6 +218,7 @@ class Blast(object):
         self.collided = False
         image = pygame.image.load('blast.png')
         self.image = pygame.transform.scale(image, (20, 20))
+        self.damage = 10
         # self.image = pygame.transform.flip(image, True, True)    
 
     def drawBlast(self):
@@ -165,7 +235,6 @@ class Blast(object):
         self.centerY += changeY
         window.blit(self.image, (self.startX, self.startY))
 
-
 class EnemyBlast(Blast):
     def __init__(self, startX, startY, endX, endY):
         super().__init__(startX, startY, endX, endY)
@@ -173,6 +242,7 @@ class EnemyBlast(Blast):
         image = pygame.image.load('enemyBlast.png')
         self.image = pygame.transform.scale(image, (15, 15))
         self.speed = 15
+        self.damage = 10
 
 # images of the different types of asteroids
 # found on google images
@@ -213,7 +283,6 @@ class Asteroid(object):
         self.image = pygame.transform.scale(image, (self.size, self.size))
         self.imageCollide = pygame.transform.scale(imageCollide, (self.size, self.size))
         
-
     def drawAsteroid(self):
         # moves asteroid to where the player was located
         changeX = self.speed * self.unitVector[0]
@@ -226,8 +295,11 @@ class Asteroid(object):
             window.blit(self.image, (self.startX, self.startY))
         else:
             window.blit(self.imageCollide, (self.startX, self.startY))
-        pygame.draw.rect(window, (255, 0, 0), (self.startX, self.startY + self.size / 8, self.size, self.size / 20))
-        pygame.draw.rect(window, (0, 255, 0), (self.startX, self.startY + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
+        pygame.draw.rect(window, (255, 0, 0), \
+            (self.startX, self.startY + self.size / 8, self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), \
+            (self.startX, self.startY + self.size / 8, \
+                (self.health / self.totalHealth) * self.size, self.size / 20))
 
 class EnemyShip(object):
     def __init__(self, targetX, targetY):
@@ -263,13 +335,13 @@ class EnemyShip(object):
 
     def shoot(self, targetX, targetY):
         if self.shoot:
-            enemyBlastList.append(EnemyBlast(self.centerX + 20, self.centerY + 20, \
+            game.enemyBlastList.append(EnemyBlast(self.centerX + 20, self.centerY + 20, \
                 targetX + 10, targetY + 10))
         
     def drawShip(self):
         if self.move: 
-            self.targetX = player.centerX
-            self.targetY = player.centerY
+            self.targetX = game.player.centerX
+            self.targetY = game.player.centerY
             self.centerX = self.startX + self.size / 2
             self.centerY = self.startY + self.size / 2
             vector = (self.targetX - self.centerX, self.targetY - self.centerY)
@@ -280,26 +352,27 @@ class EnemyShip(object):
             self.centerX += changeX
             self.startY += changeY
             self.centerY += changeY
-            d = distance(self.centerX, self.centerY, player.centerX, player.centerY)
-            if d <= min(screenWidth, screenHeight) / 3:
+            d = distance(self.centerX, self.centerY, game.player.centerX, game.player.centerY)
+            if d <= min(screenWidth, screenHeight) / 3 and isInRange(self.centerX, self.centerY):
                 self.move = False
                 self.shoot = True
         else:
             self.counter += 1
             if self.counter % 30 == 0:
-                EnemyShip.shoot(self, player.centerX, player.centerY)
+                EnemyShip.shoot(self, game.player.centerX, game.player.centerY)
         # rotate the ship so it points to the player center at all times
-        angle = - getAngle(self.centerX, self.centerY, player.centerX, player.centerY)
+        angle = - getAngle(self.centerX, self.centerY, game.player.centerX, game.player.centerY)
         newImage = pygame.transform.rotate(self.image, angle)
         window.blit(newImage, (self.startX, self.startY))
-        pygame.draw.rect(window, (255, 0, 0), (self.startX, self.startY + self.size / 8, self.size, self.size / 20))
-        pygame.draw.rect(window, (0, 255, 0), (self.startX, self.startY + self.size / 8, (self.health / self.totalHealth) * self.size, self.size / 20))
-
+        pygame.draw.rect(window, (255, 0, 0), (self.startX, \
+            self.startY + self.size / 8, self.size, self.size / 20))
+        pygame.draw.rect(window, (0, 255, 0), (self.startX, self.startY + self.size / 8, \
+                (self.health / self.totalHealth) * self.size, self.size / 20))
 
 class SmallShip(EnemyShip):
     def __init__(self, targetX, targetY):
         super().__init__(targetX, targetY)
-        self.size = 50
+        self.size = 40
         self.totalHealth = 20
         self.health = self.totalHealth
         self.image = pygame.image.load('smallShip.png')
@@ -330,129 +403,224 @@ def cursor(x, y):
     # puts target image over the cursor
     window.blit(cursorImage, (x, y))
 
-def drawAll(mouseX, mouseY, angle):
-    window.blit(bg, (0, 0))
-    # draw the player
-    player.drawPlayer(angle)
-    # Draw the blasts and check if the blasts are in the boundaries
-    for blast in blastList:
-        if isInRange(blast.startX, blast.startY) and not blast.collided:
-            blast.drawBlast()
-        else: blastList.remove(blast)
-    # draw the asteroids and check if they are in the bounds
-    # Also check for asteroid and player collision
-    for asteroid in asteroidList:
-        asteroid.drawAsteroid()
-        if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
-            player.centerX, player.centerY, player.size):
-            player.health -= 10
-            asteroid.health -= 5
-        if not isInRange(asteroid.startX,asteroid.startY)\
-            and not isInRange(asteroid.startX + asteroid.size, \
-                 asteroid.startY + asteroid.size):
-            asteroidList.remove(asteroid)
-        elif asteroid.health <= 0:
-            asteroidList.remove(asteroid)
-    # draw ships
-    # check for blasts and asteroid collision
-    for asteroid in asteroidList:
-        for blast in blastList:
+# Game Class : contains the game loop , splashscreen and gameover screen
+class Game(object):
+    def __init__(self):
+        self.running = False
+        self.player = Player(screenWidth / 2 - 25, screenHeight / 2 - 25, 50)
+        self.blastList = []
+        self.asteroidList = []
+        self.shipList = []
+        self.enemyBlastList = []
+        self.powerUpsOnSceen = []
+        self.clock = pygame.time.Clock()
+        self.modes = ['Easy', "Medium", 'Hard', 'Extreme']
+        self.additionalDamage = 0
+        self.fontName = pygame.font.match_font('Arial')
+
+    def drawText(self, text, centerX, centerY, size = 20, color=(255, 255, 255)):
+        font = pygame.font.Font(self.fontName, size)
+        textSurface = font.render(text, True, color)
+        textBox = textSurface.get_rect()
+        textBox.midtop = (centerX, centerY)
+        window.blit(textSurface, textBox)
+
+    def mainMenu(self):
+        window.blit(bg, (0,0))
+        self.drawText("BEAT HAZARD", screenWidth / 2, screenHeight / 3, size = 40)
+        self.drawText('Press play to start the game', screenWidth / 2, \
+            screenHeight * 3 / 5, size = 20)
+        playButton = Button("PLAY GAME", screenWidth / 2, screenHeight * 4 / 5, \
+            screenWidth / 9, screenHeight / 12)
+        playButton.drawButton(window)
+        pygame.display.flip()
+        waiting = True
+        while waiting:
+            self.clock.tick(15)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                    self.running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    if (playButton.x <= mouseX <= playButton.x + playButton.sizeX) and \
+                        (playButton.y <= mouseY <= playButton.y + playButton.sizeY):
+                        waiting = False
+                        self.running = True
+        if self.running == False:
+            return
+        self.running = True
+        self.run()
+
+    def gameOver(self):
+        pass
+
+    def drawAll(self, mouseX, mouseY, playerAngle):
+        # drawAll(self, mouseX, mouseY, playerAngle)
+        window.blit(bg, (0, 0))
+        # draw the player
+        self.player.drawPlayer(playerAngle)
+        # Draw the blasts and check if the blasts are in the boundaries
+        for blast in self.blastList:
+            if isInRange(blast.startX, blast.startY) and not blast.collided:
+                blast.drawBlast()
+            else: self.blastList.remove(blast)
+        # draw the asteroids and check if they are in the bounds
+        # Also check for asteroid and player collision
+        randInt = random.randint(1, 4)
+        for asteroid in self.asteroidList:
             if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
+                self.player.centerX, self.player.centerY, self.player.size):
+                self.player.health -= 10
+                asteroid.health -= 5
+            if not isInRange(asteroid.startX,asteroid.startY)\
+                and not isInRange(asteroid.startX + asteroid.size, \
+                    asteroid.startY + asteroid.size):
+                self.asteroidList.remove(asteroid)
+            asteroid.drawAsteroid()
+            if asteroid.health <= 0:
+                self.asteroidList.remove(asteroid)
+        # check for blasts and asteroid collision
+        for asteroid in self.asteroidList:
+            for blast in self.blastList:
+                if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
+                    blast.centerX, blast.centerY, blast.size):
+                    blast.collided = True
+                    asteroid.health -= (blast.damage + self.additionalDamage)
+                    if asteroid.health <= 0:
+                        if randInt == 1: # 25% chance to spawn power up
+                            powerUpNum = random.randint(1, 4)
+                            if powerUpNum == 1:
+                                powerUp = DestroyEnemies(asteroid.centerX, asteroid.centerY)
+                            elif powerUpNum == 2:
+                                powerUp = MoreHealth(asteroid.centerX, asteroid.centerY)
+                            elif powerUpNum == 3:
+                                powerUp = MoreSpeed(asteroid.centerX, asteroid.centerY)
+                            elif powerUpNum == 4:
+                                powerUp = MoreDamage(asteroid.centerX, asteroid.centerY)
+                            self.powerUpsOnSceen.append(powerUp)
+        # draw enemy ships
+        for enemy in self.shipList:
+            enemy.drawShip()
+            if enemy.health <= 0:
+                if randInt == 1: # 25% chance to spawn power up
+                    powerUpNum = random.randint(1, 4)
+                    if powerUpNum == 1:
+                        powerUp = DestroyEnemies(enemy.centerX, enemy.centerY)
+                    elif powerUpNum == 2:
+                        powerUp = MoreHealth(enemy.centerX, enemy.centerY)
+                    elif powerUpNum == 3:
+                        powerUp = MoreSpeed(enemy.centerX, enemy.centerY)
+                    elif powerUpNum == 4:
+                        powerUp = MoreDamage(enemy.centerX, enemy .centerY)
+                    self.powerUpsOnSceen.append(powerUp)
+                self.shipList.remove(enemy)
+        # draw blasts
+        for blast in self.enemyBlastList:
+            if isInRange(blast.startX, blast.startY) and not blast.collided:
+                blast.drawBlast()
+            else: self.enemyBlastList.remove(blast)
+        # collision between blast and enemies
+        for enemy in self.shipList:
+            for blast in self.blastList:
+                if isCollision(enemy.centerX, enemy.centerY, enemy.size, \
+                    blast.centerX, blast.centerY, blast.size):
+                    enemy.health -= (blast.damage + self.additionalDamage)
+                    blast.collided = True
+        for blast in self.enemyBlastList:
+            if isCollision(self.player.centerX, self.player.centerY, self.player.size, \
                 blast.centerX, blast.centerY, blast.size):
+                self.player.health -= 10
                 blast.collided = True
-                asteroid.health -= 10
-    for enemy in shipList:
-        enemy.drawShip()
-        if enemy.health <= 0:
-            shipList.remove(enemy)
-    for blast in enemyBlastList:
-        if isInRange(blast.startX, blast.startY) and not blast.collided:
-            blast.drawBlast()
-        else: enemyBlastList.remove(blast)
-    for enemy in shipList:
-        for blast in blastList:
-            if isCollision(enemy.centerX, enemy.centerY, enemy.size, \
-                blast.centerX, blast.centerY, blast.size):
-                enemy.health -= 10
-                blast.collided = True
-    for blast in enemyBlastList:
-        if isCollision(player.centerX, player.centerY, player.size, \
-            blast.centerX, blast.centerY, blast.size):
-            player.health -= 10
-            blast.collided = True
-    # draw the cursor with a helper function
-    cursor(mouseX - 10, mouseY - 10)
-    pygame.display.update()
+        for powerUp in self.powerUpsOnSceen:
+            powerUp.drawPowerUp()
+            if not isInRange(powerUp.x, powerUp.y) or not isInRange(powerUp.x +\
+                 powerUp.size, powerUp.y + powerUp.size):
+                 self.powerUpsOnSceen.remove(powerUp)
+            elif isCollision(self.player.centerX, self.player.centerY, \
+                self.player.size, powerUp.x, powerUp.y, powerUp.size):
+                if isinstance(powerUp, DestroyEnemies):
+                    self.shipList = []
+                    self.asteroidList = []
+                    self.enemyBlastList = []
+                elif isinstance(powerUp, MoreHealth):
+                    self.player.health += 100
+                    if self.player.health >= self.player.totalHealth:
+                        self.player.health = self.player.totalHealth
+                elif isinstance(powerUp, MoreDamage):
+                    self.additionalDamage += 5
+                elif isinstance(powerUp, MoreSpeed):
+                    self.player.vel += 0.5
+                self.powerUpsOnSceen.remove(powerUp)
+        # draw the cursor with a helper function
+        cursor(mouseX - 10, mouseY - 10)
+        pygame.display.update()
 
-# main loop
-player = Player(screenWidth / 2 - 25, screenHeight / 2 - 25, 50)
-blastList = []
-asteroidList = []
-shipList = []
-enemyBlastList = []
-
-running = True
-clock = pygame.time.Clock()
-while running:
-    # pygame.time.delay(25)
-    clock.tick(30)
-    # check the events
-    # code from https://www.pygame.org/docs/ref/key.html
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-            break
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                player.yChange = -1
-            if (event.key == pygame.K_DOWN):
-                player.yChange = 1
-            if event.key == pygame.K_RIGHT:
-                player.xChange = 1
-            if event.key == pygame.K_LEFT:
-                player.xChange = -1
-            if event.key == pygame.K_SPACE:
-                player.usePowerUp
-        if event.type == pygame.KEYUP:
-            if (event.key == pygame.K_UP):
-                player.yChange = 0
-            if event.key == pygame.K_DOWN:
-                player.yChange = 0
-            if event.key == pygame.K_RIGHT:
-                player.xChange = 0
-            if event.key == pygame.K_LEFT:
-                player.xChange = 0
-        if event.type == pygame.MOUSEBUTTONDOWN:
+    def run(self):
+        while self.running:
+            self.clock.tick(30)
+            # check the events
+            # code from https://www.pygame.org/docs/ref/key.html
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        self.player.yChange = -1
+                    if (event.key == pygame.K_DOWN):
+                        self.player.yChange = 1
+                    if event.key == pygame.K_RIGHT:
+                        self.player.xChange = 1
+                    if event.key == pygame.K_LEFT:
+                        self.player.xChange = -1
+                    if event.key == pygame.K_SPACE:
+                        self.player.usePowerUp
+                if event.type == pygame.KEYUP:
+                    if (event.key == pygame.K_UP):
+                        self.player.yChange = 0
+                    if event.key == pygame.K_DOWN:
+                        self.player.yChange = 0
+                    if event.key == pygame.K_RIGHT:
+                        self.player.xChange = 0
+                    if event.key == pygame.K_LEFT:
+                        self.player.xChange = 0
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    self.blastList.append(Blast(self.player.centerX + 10, \
+                        self.player.centerY + 10, mouseX + 10, mouseY + 10))    
+            self.player.x, self.player.y = self.player.x + self.player.xChange * self.player.vel , \
+                self.player.y + self.player.yChange * self.player.vel
+            if self.player.x < 0:
+                self.player.x = 0
+            if self.player.x + self.player.size > screenWidth:
+                self.player.x = screenWidth - self.player.size
+            if self.player.y < 0:
+                self.player.y = 0
+            if self.player.y + self.player.size > screenHeight:
+                self.player.y = screenHeight - self.player.size
+            # hide cursor and set cursor image
+            pygame.mouse.set_visible(False)
+            # generate Asteroid at random time
+            # replace later with the beat of the song
+            randomNum = random.randint(1, 1000)
+            if randomNum > 995:
+                self.asteroidList.append(Asteroid(self.player.x, self.player.y))
+            # generate small ship
+            if randomNum < 10:
+                randTypeShip= random.randint(1, 100)
+                if randTypeShip < 50:
+                    self.shipList.append(SmallShip(self.player.centerX, self.player.centerY))
+                else:
+                    self.shipList.append(MediumShip(self.player.x, self.player.y))
+            # check the mouse position for player rotation
             mouseX, mouseY = pygame.mouse.get_pos()
-            blastList.append(Blast(player.centerX + 10, \
-                player.centerY + 10, mouseX + 10, mouseY + 10))    
-    player.x, player.y = player.x + player.xChange * player.vel , \
-        player.y + player.yChange * player.vel
-    if player.x < 0:
-        player.x = 0
-    if player.x + player.size > screenWidth:
-        player.x = screenWidth - player.size
-    if player.y < 0:
-        player.y = 0
-    if player.y + player.size > screenHeight:
-        player.y = screenHeight - player.size
-    # hide cursor and set cursor image
-    pygame.mouse.set_visible(False)
-    # generate Asteroid at random time
-    # replace later with the beat of the song
-    randomNum = random.randint(1, 1000)
-    if randomNum > 995:
-        asteroidList.append(Asteroid(player.x, player.y))
-    # generate small ship
-    if randomNum < 10: 
-        randTypeShip= random.randint(1, 100)
-        if randTypeShip < 50:
-            shipList.append(SmallShip(player.centerX, player.centerY))
-        else:
-            shipList.append(MediumShip(player.x, player.y))
-    # check the mouse position for player rotation
-    mouseX, mouseY = pygame.mouse.get_pos()
-    playerAngle = player.rotationAngle(mouseX, mouseY)
-    drawAll(mouseX, mouseY, playerAngle)
+            playerAngle = self.player.rotationAngle(mouseX, mouseY)
+            if self.player.health <= 0:
+                self.running = False
+                self.gameOver()
+            self.drawAll(mouseX, mouseY, playerAngle)
 
+pygame.init()
+game = Game()
+game.mainMenu()
 pygame.quit()
