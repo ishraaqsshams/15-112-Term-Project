@@ -16,7 +16,7 @@ GREEN = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 class Button(object):
-    def __init__(self, text, centerX, centerY, sizeX, sizeY):
+    def __init__(self, text, centerX, centerY, sizeX, sizeY, textSize):
         self.centerX = centerX
         self.centerY = centerY
         self.sizeX = sizeX
@@ -26,12 +26,13 @@ class Button(object):
         self.color = WHITE
         self.fontName = pygame.font.match_font('Arial')
         self.text = text
+        self.textSize = textSize
 
-    def drawText(self, surface, size = 20, color = BLACK):
-        font = pygame.font.Font(self.fontName, size)
+    def drawText(self, surface, color = BLACK):
+        font = pygame.font.Font(self.fontName, self.textSize)
         textSurface = font.render(self.text, True, color)
         textBox = textSurface.get_rect()
-        textBox.midtop = (self.centerX, self.centerY - size / 2)
+        textBox.midtop = (self.centerX, self.centerY - self.textSize / 2)
         surface.blit(textSurface, textBox)
     
     def drawButton(self, surface):
@@ -398,6 +399,10 @@ bg = pygame.image.load('background.jpg')
 bg = pygame.transform.scale(bg, (screenWidth, screenHeight))
 cursor = pygame.image.load('targetAim.png')
 cursorImage = pygame.transform.scale(cursor, (20, 20))
+pauseButton = pygame.image.load('pauseButton.png')
+pauseButton = pygame.transform.scale(pauseButton, (30, 30))
+playButton = pygame.image.load('playButton.png')
+playButton = pygame.transform.scale(playButton, (30, 30))
 
 def cursor(x, y):
     # puts target image over the cursor
@@ -414,7 +419,7 @@ class Game(object):
         self.enemyBlastList = []
         self.powerUpsOnSceen = []
         self.clock = pygame.time.Clock()
-        self.modes = ['Easy', "Medium", 'Hard', 'Extreme']
+        self.difficulty = None
         self.additionalDamage = 0
         self.fontName = pygame.font.match_font('Arial')
 
@@ -426,38 +431,194 @@ class Game(object):
         window.blit(textSurface, textBox)
 
     def mainMenu(self):
-        window.blit(bg, (0,0))
-        self.drawText("BEAT HAZARD", screenWidth / 2, screenHeight / 3, size = 40)
-        self.drawText('Press play to start the game', screenWidth / 2, \
-            screenHeight * 3 / 5, size = 20)
-        playButton = Button("PLAY GAME", screenWidth / 2, screenHeight * 4 / 5, \
-            screenWidth / 9, screenHeight / 12)
-        playButton.drawButton(window)
-        pygame.display.flip()
         waiting = True
         while waiting:
+            window.blit(bg, (0,0))
+            self.drawText("BEAT HAZARD", screenWidth / 2, screenHeight / 3, size = 40)
+            self.drawText('Press play to start the game', screenWidth / 2, \
+                screenHeight * 3 / 5, size = 20)
+            playButton = Button("Choose Song", screenWidth / 3, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            playButton.drawButton(window)
+            helpButton = Button("Instructions", 2 * screenWidth / 3, screenHeight * 4 /5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            helpButton.drawButton(window)
             self.clock.tick(15)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     waiting = False
-                    self.running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouseX, mouseY = pygame.mouse.get_pos()
                     if (playButton.x <= mouseX <= playButton.x + playButton.sizeX) and \
                         (playButton.y <= mouseY <= playButton.y + playButton.sizeY):
                         waiting = False
-                        self.running = True
-        if self.running == False:
-            return
+                        self.songScreen()
+                    if (helpButton.x <= mouseX <= helpButton.x + helpButton.sizeX) and \
+                        (helpButton.y <= mouseY <= helpButton.y + helpButton.sizeY):
+                        waiting = False
+                        self.instructionsScreen()
+            pygame.mouse.set_visible(False)
+            mx, my = pygame.mouse.get_pos()
+            cursor(mx - 10, my - 10)
+            pygame.display.update()
+
+    def instructionsScreen(self):
+        waiting = True
+        while waiting:
+            window.blit(bg, (0,0))
+            self.drawText("Instructions", screenWidth / 2, screenHeight / 5, size = 70)
+            self.drawText("place instructions here", screenWidth / 2, screenHeight / 2, size = 20)
+            playButton = Button("Choose Song", screenWidth / 3, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            playButton.drawButton(window)
+            menuButton = Button("Return to Main Menu", 2 * screenWidth / 3, screenHeight * 4 /5, \
+                screenWidth / 9, screenHeight / 12, 14)
+            menuButton.drawButton(window)
+            self.clock.tick(15)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    if (playButton.x <= mouseX <= playButton.x + playButton.sizeX) and \
+                        (playButton.y <= mouseY <= playButton.y + playButton.sizeY):
+                        waiting = False
+                        self.songScreen()
+                    if (menuButton.x <= mouseX <= menuButton.x + menuButton.sizeX) and \
+                        (menuButton.y <= mouseY <= menuButton.y + menuButton.sizeY):
+                        waiting = False
+                        self.mainMenu()
+            pygame.mouse.set_visible(False)
+            mx, my = pygame.mouse.get_pos()
+            cursor(mx - 10, my - 10)
+            pygame.display.update()
+
+    def songScreen(self):
+        waiting = True
+        while waiting:
+            window.blit(bg, (0,0))
+            self.drawText("Choose Song", screenWidth / 2, screenHeight / 5, size = 70)
+            self.drawText("Select Difficulty", screenWidth / 2, screenHeight / 2, size = 20)
+            easyButton = Button("Easy", screenWidth / 4, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            easyButton.drawButton(window)
+            mediumButton = Button("Medium", screenWidth / 2, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            mediumButton.drawButton(window)
+            hardButton = Button("Hard", screenWidth * 3 / 4, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            hardButton.drawButton(window)
+            self.clock.tick(15)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    if (easyButton.x <= mouseX <= easyButton.x + easyButton.sizeX) and \
+                        (easyButton.y <= mouseY <= easyButton.y + easyButton.sizeY):
+                        self.difficulty = 'Easy'
+                        waiting = False
+                    if (mediumButton.x <= mouseX <= mediumButton.x + mediumButton.sizeX) and \
+                        (mediumButton.y <= mouseY <= mediumButton.y + mediumButton.sizeY):
+                        self.difficulty = 'Medium'
+                        waiting = False
+                    if (hardButton.x <= mouseX <= hardButton.x + hardButton.sizeX) and \
+                        (hardButton.y <= mouseY <= hardButton.y + hardButton.sizeY):
+                        self.difficulty = 'Hard'
+                        waiting = False
+            pygame.mouse.set_visible(False)
+            mx, my = pygame.mouse.get_pos()
+            cursor(mx - 10, my - 10)
+            pygame.display.update()
+        self.newGame()
+
+    def newGame(self):
+        self.player = Player(screenWidth / 2 - 25, screenHeight / 2 - 25, 50)
+        self.blastList = []
+        self.asteroidList = []
+        self.shipList = []
+        self.enemyBlastList = []
+        self.powerUpsOnSceen = []
+        self.clock = pygame.time.Clock()
+        self.additionalDamage = 0
+        self.fontName = pygame.font.match_font('Arial')
         self.running = True
         self.run()
+    
+    def pauseScreen(self):
+        waiting = True
+        while waiting:
+            window.blit(bg, (0,0))
+            window.blit(playButton, (screenWidth - 40, 10))
+            self.drawText("Paused", screenWidth / 2, screenHeight / 5, size = 70)
+            self.drawText("place time and stats here", screenWidth / 2, screenHeight / 2, size = 20)
+            resumeButton = Button("Resume", screenWidth / 3, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            resumeButton.drawButton(window)
+            menuButton = Button("Return to Main Menu", 2 * screenWidth / 3, screenHeight * 4 /5, \
+                screenWidth / 9, screenHeight / 12, 14)
+            menuButton.drawButton(window)
+            self.clock.tick(15)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    if (screenWidth - 40 <= mouseX <= screenWidth) and \
+                        (0 <= mouseY <= 40):
+                        waiting = False
+                        self.running = True
+                        self.run()
+                    if (resumeButton.x <= mouseX <= resumeButton.x + resumeButton.sizeX) and \
+                        (resumeButton.y <= mouseY <= resumeButton.y + resumeButton.sizeY):
+                        waiting = False
+                        self.running = True
+                        self.run()
+                    if (menuButton.x <= mouseX <= menuButton.x + menuButton.sizeX) and \
+                        (menuButton.y <= mouseY <= menuButton.y + menuButton.sizeY):
+                        waiting = False
+                        self.mainMenu()
+            pygame.mouse.set_visible(False)
+            mx, my = pygame.mouse.get_pos()
+            cursor(mx - 10, my - 10)
+            pygame.display.update()
 
     def gameOver(self):
-        pass
+        waiting = True
+        while waiting:
+            window.blit(bg, (0,0))
+            self.drawText("GAME OVER", screenWidth / 2, screenHeight / 5, size = 70)
+            replayButton = Button("Replay", screenWidth / 3, screenHeight * 4 / 5, \
+                screenWidth / 9, screenHeight / 12, 20)
+            replayButton.drawButton(window)
+            menuButton = Button("Return to Main Menu", 2 * screenWidth / 3, screenHeight * 4 /5, \
+                screenWidth / 9, screenHeight / 12, 14)
+            menuButton.drawButton(window)
+            self.clock.tick(15)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    waiting = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseX, mouseY = pygame.mouse.get_pos()
+                    if (replayButton.x <= mouseX <= replayButton.x + replayButton.sizeX) and \
+                        (replayButton.y <= mouseY <= replayButton.y + replayButton.sizeY):
+                        waiting = False
+                        self.newGame()
+                    if (menuButton.x <= mouseX <= menuButton.x + menuButton.sizeX) and \
+                        (menuButton.y <= mouseY <= menuButton.y + menuButton.sizeY):
+                        waiting = False
+                        self.mainMenu()
+            pygame.mouse.set_visible(False)
+            mx, my = pygame.mouse.get_pos()
+            cursor(mx - 10, my - 10)
+            pygame.display.update()
+
 
     def drawAll(self, mouseX, mouseY, playerAngle):
         # drawAll(self, mouseX, mouseY, playerAngle)
         window.blit(bg, (0, 0))
+        # draw Pause button
+        window.blit(pauseButton, (screenWidth - 40, 10))
         # draw the player
         self.player.drawPlayer(playerAngle)
         # Draw the blasts and check if the blasts are in the boundaries
@@ -467,7 +628,6 @@ class Game(object):
             else: self.blastList.remove(blast)
         # draw the asteroids and check if they are in the bounds
         # Also check for asteroid and player collision
-        randInt = random.randint(1, 4)
         for asteroid in self.asteroidList:
             if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
                 self.player.centerX, self.player.centerY, self.player.size):
@@ -477,10 +637,11 @@ class Game(object):
                 and not isInRange(asteroid.startX + asteroid.size, \
                     asteroid.startY + asteroid.size):
                 self.asteroidList.remove(asteroid)
-            asteroid.drawAsteroid()
             if asteroid.health <= 0:
                 self.asteroidList.remove(asteroid)
+            asteroid.drawAsteroid()
         # check for blasts and asteroid collision
+        randInt = random.randint(1, 100)
         for asteroid in self.asteroidList:
             for blast in self.blastList:
                 if isCollision(asteroid.centerX, asteroid.centerY, asteroid.size, \
@@ -488,33 +649,83 @@ class Game(object):
                     blast.collided = True
                     asteroid.health -= (blast.damage + self.additionalDamage)
                     if asteroid.health <= 0:
-                        if randInt == 1: # 25% chance to spawn power up
-                            powerUpNum = random.randint(1, 4)
-                            if powerUpNum == 1:
-                                powerUp = DestroyEnemies(asteroid.centerX, asteroid.centerY)
-                            elif powerUpNum == 2:
-                                powerUp = MoreHealth(asteroid.centerX, asteroid.centerY)
-                            elif powerUpNum == 3:
-                                powerUp = MoreSpeed(asteroid.centerX, asteroid.centerY)
-                            elif powerUpNum == 4:
-                                powerUp = MoreDamage(asteroid.centerX, asteroid.centerY)
-                            self.powerUpsOnSceen.append(powerUp)
+                        if self.difficulty == 'Easy':
+                            if randInt in range(1, 31): 
+                                powerUpNum = random.randint(1, 12)
+                                if powerUpNum in range(1, 3):
+                                    powerUp = DestroyEnemies(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(3, 6):
+                                    powerUp = MoreHealth(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(6, 9):
+                                    powerUp = MoreSpeed(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(9, 12):
+                                    powerUp = MoreDamage(asteroid.centerX, asteroid.centerY)
+                                self.powerUpsOnSceen.append(powerUp)
+                        elif self.difficulty == 'Medium':
+                            if randInt in range(1, 21): 
+                                powerUpNum = random.randint(0, 20)
+                                if powerUpNum in range(0, 3):
+                                    powerUp = DestroyEnemies(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(3, 9):
+                                    powerUp = MoreHealth(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(9, 15):
+                                    powerUp = MoreSpeed(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(15, 21):
+                                    powerUp = MoreDamage(asteroid.centerX, asteroid.centerY)
+                                self.powerUpsOnSceen.append(powerUp)
+                        elif self.difficulty == 'Hard':
+                            if randInt in range(1, 11): 
+                                powerUpNum = random.randint(0, 20)
+                                if powerUpNum in range(0, 3):
+                                    powerUp = DestroyEnemies(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(3, 9):
+                                    powerUp = MoreHealth(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(9, 15):
+                                    powerUp = MoreSpeed(asteroid.centerX, asteroid.centerY)
+                                elif powerUpNum in range(15, 21):
+                                    powerUp = MoreDamage(asteroid.centerX, asteroid.centerY)
+                                self.powerUpsOnSceen.append(powerUp)
         # draw enemy ships
         for enemy in self.shipList:
-            enemy.drawShip()
             if enemy.health <= 0:
-                if randInt == 1: # 25% chance to spawn power up
-                    powerUpNum = random.randint(1, 4)
-                    if powerUpNum == 1:
-                        powerUp = DestroyEnemies(enemy.centerX, enemy.centerY)
-                    elif powerUpNum == 2:
-                        powerUp = MoreHealth(enemy.centerX, enemy.centerY)
-                    elif powerUpNum == 3:
-                        powerUp = MoreSpeed(enemy.centerX, enemy.centerY)
-                    elif powerUpNum == 4:
-                        powerUp = MoreDamage(enemy.centerX, enemy .centerY)
-                    self.powerUpsOnSceen.append(powerUp)
+                if self.difficulty == 'Easy':
+                    if randInt in range(1, 31): 
+                        powerUpNum = random.randint(1, 12)
+                        if powerUpNum in range(1, 3):
+                            powerUp = DestroyEnemies(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(3, 6):
+                            powerUp = MoreHealth(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(6, 9):
+                            powerUp = MoreSpeed(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(9, 12):
+                            powerUp = MoreDamage(enemy.centerX, enemy.centerY)
+                        self.powerUpsOnSceen.append(powerUp)
+                elif self.difficulty == 'Medium':
+                    if randInt in range(1, 21): 
+                        powerUpNum = random.randint(0, 20)
+                        if powerUpNum in range(0, 3):
+                            powerUp = DestroyEnemies(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(3, 9):
+                            powerUp = MoreHealth(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(9, 15):
+                            powerUp = MoreSpeed(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(15, 21):
+                            powerUp = MoreDamage(enemy.centerX, enemy.centerY)
+                        self.powerUpsOnSceen.append(powerUp)
+                elif self.difficulty == 'Hard':
+                    if randInt in range(1, 11): 
+                        powerUpNum = random.randint(0, 20)
+                        if powerUpNum in range(0, 3):
+                            powerUp = DestroyEnemies(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(3, 9):
+                            powerUp = MoreHealth(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(9, 15):
+                            powerUp = MoreSpeed(enemy.centerX, enemy.centerY)
+                        elif powerUpNum in range(15, 21):
+                            powerUp = MoreDamage(enemy.centerX, enemy.centerY)
+                        self.powerUpsOnSceen.append(powerUp)
                 self.shipList.remove(enemy)
+            enemy.drawShip()
         # draw blasts
         for blast in self.enemyBlastList:
             if isInRange(blast.startX, blast.startY) and not blast.collided:
@@ -586,6 +797,10 @@ class Game(object):
                         self.player.xChange = 0
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouseX, mouseY = pygame.mouse.get_pos()
+                    if (screenWidth - 40 <= mouseX <= screenWidth) and \
+                        (0 <= mouseY <= 40):
+                        self.running = False
+                        self.pauseScreen()
                     self.blastList.append(Blast(self.player.centerX + 10, \
                         self.player.centerY + 10, mouseX + 10, mouseY + 10))    
             self.player.x, self.player.y = self.player.x + self.player.xChange * self.player.vel , \
@@ -603,15 +818,36 @@ class Game(object):
             # generate Asteroid at random time
             # replace later with the beat of the song
             randomNum = random.randint(1, 1000)
-            if randomNum > 995:
-                self.asteroidList.append(Asteroid(self.player.x, self.player.y))
-            # generate small ship
-            if randomNum < 10:
-                randTypeShip= random.randint(1, 100)
-                if randTypeShip < 50:
-                    self.shipList.append(SmallShip(self.player.centerX, self.player.centerY))
-                else:
-                    self.shipList.append(MediumShip(self.player.x, self.player.y))
+            if self.difficulty == "Easy":
+                if randomNum > 998:
+                    self.asteroidList.append(Asteroid(self.player.x, self.player.y))
+                # generate small ship
+                if randomNum < 5:
+                    randTypeShip= random.randint(1, 100)
+                    if randTypeShip < 70:
+                        self.shipList.append(SmallShip(self.player.centerX, self.player.centerY))
+                    else:
+                        self.shipList.append(MediumShip(self.player.x, self.player.y))
+            if self.difficulty == "Medium":
+                if randomNum > 995:
+                    self.asteroidList.append(Asteroid(self.player.x, self.player.y))
+                # generate small ship
+                if randomNum < 10:
+                    randTypeShip= random.randint(1, 100)
+                    if randTypeShip < 70:
+                        self.shipList.append(SmallShip(self.player.centerX, self.player.centerY))
+                    else:
+                        self.shipList.append(MediumShip(self.player.x, self.player.y))
+            if self.difficulty == "Hard":
+                if randomNum > 990:
+                    self.asteroidList.append(Asteroid(self.player.x, self.player.y))
+                # generate small ship
+                if randomNum < 12:
+                    randTypeShip= random.randint(1, 100)
+                    if randTypeShip < 60:
+                        self.shipList.append(SmallShip(self.player.centerX, self.player.centerY))
+                    else:
+                        self.shipList.append(MediumShip(self.player.x, self.player.y))
             # check the mouse position for player rotation
             mouseX, mouseY = pygame.mouse.get_pos()
             playerAngle = self.player.rotationAngle(mouseX, mouseY)
